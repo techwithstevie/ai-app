@@ -13,6 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import axios from "axios";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import Constants from "expo-constants";
 
 type Role = "user" | "assistant";
 
@@ -22,7 +23,9 @@ type Message = {
   content: string;
 };
 
-const BACKEND_URL = "https://lino-huskier-superindignantly.ngrok-free.dev";
+const BACKEND_URL = 
+  Constants.expoConfig?.extra?.backendUrl ?? "http://localhost:8000";
+  console.log("BACKEND_URL in app:", BACKEND_URL);
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
@@ -53,7 +56,6 @@ export default function ChatScreen() {
 
     try {
       const res = await axios.post(`${BACKEND_URL}/chat`, {
-        model: "gpt-oss:120b-cloud",
         message: userMessage.content,
       });
 

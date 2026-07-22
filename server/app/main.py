@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import ChatRequest, ChatResponse
 from .ollama_client import generate_reply
+import os
 
 app = FastAPI(
     title="AI Chat Backend",
@@ -25,5 +26,8 @@ async def root():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     """ Simple AI chat endpoint """
-    reply = await generate_reply(model=req.model, prompt=req.message, system=req.system)
+    reply = await generate_reply(
+        system=req.system, 
+        prompt=req.message
+        )
     return ChatResponse(reply=reply)

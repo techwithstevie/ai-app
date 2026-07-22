@@ -1,21 +1,23 @@
+# server/app/ollama_client.py
 import httpx
+from .config import settings
 
-OLLAMA_URL = "http://localhost:11434"
 
-async def generate_reply(model: str, prompt: str, system: str | None = None) -> str:
+async def generate_reply(prompt: str, system: str | None = None) -> str:
+    """
+    Call Ollama's /api/generate using the default model from settings.
+    """
     payload: dict = {
-        "model": model,
+        "model": settings.default_model,
         "prompt": prompt,
         "stream": False,
     }
-
     if system:
         payload["system"] = system
 
     async with httpx.AsyncClient(timeout=60) as client:
-        # non-streaming: Ollama returns one JSON object
         resp = await client.post(
-            f"{OLLAMA_URL}/api/generate",
+            f"{settings.ollama_url}/api/generate",
             json=payload,
         )
         resp.raise_for_status()
