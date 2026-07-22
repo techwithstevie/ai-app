@@ -23,9 +23,12 @@ type Message = {
   content: string;
 };
 
-const BACKEND_URL = 
+const BACKEND_URL =
   Constants.expoConfig?.extra?.backendUrl ?? "http://localhost:8000";
-  console.log("BACKEND_URL in app:", BACKEND_URL);
+
+// For now, a simple hard-coded session id.
+// You can generate a UUID and persist it if you prefer.
+const SESSION_ID = "default";
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
@@ -36,10 +39,16 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    console.log("BACKEND_URL in app:", BACKEND_URL);
+  }, []);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
     if (scrollRef.current) {
+      // TypeScript thinks this is boolean-based; keep it simple
       scrollRef.current.scrollToEnd(true);
     }
-  }, [messages])
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -56,6 +65,7 @@ export default function ChatScreen() {
 
     try {
       const res = await axios.post(`${BACKEND_URL}/chat`, {
+        session_id: SESSION_ID,
         message: userMessage.content,
       });
 
@@ -66,14 +76,20 @@ export default function ChatScreen() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Chat request failed", {
+        url: `${BACKEND_URL}/chat`,
+        message: err?.message,
+        code: err?.code,
+        response: err?.response,
+      });
+
       const errorMessage: Message = {
         id: Date.now().toString() + "-error",
         role: "assistant",
         content: "Error contacting AI backend.",
       };
       setMessages((prev) => [...prev, errorMessage]);
-      console.error(err);
     } finally {
       setIsLoading(false);
     }

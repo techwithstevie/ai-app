@@ -3,23 +3,26 @@ import httpx
 from .config import settings
 
 
-async def generate_reply(prompt: str, system: str | None = None) -> str:
+async def chat_with_ollama(messages: list[dict]) -> str:
     """
-    Call Ollama's /api/generate using the default model from settings.
+    Call Ollama's /api/chat endpoint with a full messages array.
+    messages: list of {"role": "system" | "user" | "assistant", "content": str}
     """
     payload: dict = {
         "model": settings.default_model,
-        "prompt": prompt,
+        "messages": messages,
         "stream": False,
     }
-    if system:
-        payload["system"] = system
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
-            f"{settings.ollama_url}/api/generate",
+            f"{settings.ollama_url}/api/chat",
             json=payload,
         )
         resp.raise_for_status()
         data = resp.json()
-        return data.get("response", "")
+
+        # Adjust based on actual Ollama response shape.
+        # Typically: data["message"]["content"]
+        message = data.get("message", {})
+        return message.get("content", "")
