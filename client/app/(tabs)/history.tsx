@@ -68,7 +68,7 @@ export default function HistoryScreen() {
 
     const openSession = (session: Session) => {
         router.push({
-            pathname: "/chat",
+            pathname: "/(tabs)/chat",
             params: {
                 sessionId: session.session_id,
                 persona: session.persona,
