@@ -1,9 +1,9 @@
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { chatApi } from "../services/chatApi";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiClient } from "../services/apiClient";
 import { Message, Role } from "../types";
 import {
     cleanAssistantReply,
@@ -57,7 +57,7 @@ export function useChatScreen() {
 
     const loadSessionMessages = async (existingSessionId: string, existingPersona: string) => {
         try {
-            const loaded = await chatApi.getSessionMessages(existingSessionId);
+            const loaded = await apiClient.getSessionMessages(existingSessionId);
 
             const loadedMessages: Message[] = loaded.map(
                 (m: { role: Role; content: string }, index: number) => ({
@@ -111,7 +111,7 @@ export function useChatScreen() {
         setIsLoading(true);
 
         try {
-            const reply = await chatApi.sendMessage({
+            const reply = await apiClient.sendMessage({
                 session_id: sessionId,
                 message: userMessage.content,
                 persona,
@@ -144,7 +144,7 @@ export function useChatScreen() {
     }, [messages]);
 
     useEffect(() => {
-        chatApi
+        apiClient
             .getPersonas()
             .then(setPersonas)
             .catch((err) => console.error("Failed to load personas", err));
