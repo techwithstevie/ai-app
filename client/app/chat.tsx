@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter, useLocalSearchParams, Href } from 'expo-router';
 import {
   ActivityIndicator,
   Animated,
@@ -52,6 +53,9 @@ export default function ChatScreen() {
   const [sessionId, setSessionId] = useState(createSessionId());
   const [personaMenuVisible, setPersonaMenuVisible] = useState(false);
 
+  const router = useRouter();
+  const params = useLocalSearchParams<{ sessionId?: string; persona?: string }>();
+
   const showTemporarySystemMessage = (content: string) => {
     const messageId = `system-${Date.now()}`;
 
@@ -82,6 +86,14 @@ export default function ChatScreen() {
     }, 2200);
   };
 
+  const startNewChat = () => {
+    setMessages([]);
+    setSessionId(createSessionId());
+    showTemporarySystemMessage(
+      `Started a new chat with ${formatPersonaLabel(persona)}.`
+    );
+  };
+
   const handlePersonaChange = (nextPersona: string) => {
     setPersonaMenuVisible(false);
 
@@ -101,6 +113,28 @@ export default function ChatScreen() {
       .replace(/\*(.*?)\*/g, "$1")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
+  
+  const loadSessionMessages = async (existingSessionId: string, existingPersona: string) => {
+    try {
+      const res = await axios.get(
+        `${BACKEND_URL}/sessions/${existingSessionId}/messages`
+      );
+
+      const loadedMessages: Message[] = res.data.messages.map(
+        (m: { role: Role; content: string }, index: number) => ({
+          id: `${existingSessionId}-${index}`,
+          role: m.role,
+          content: m.role === "assistant" ? cleanAssistantReply(m.content) : m.content,
+        })
+      );
+
+      setSessionId(existingSessionId);
+      setPersona(existingPersona);
+      setMessages(loadedMessages);
+    } catch (err) {
+      console.error("Failed to load session messages", err);
+    }
+  };
 
   const sendMessage = async () => {
     const trimmedInput = input.trim();
@@ -196,6 +230,12 @@ export default function ChatScreen() {
   };
 
   useEffect(() => {
+    if (params.sessionId && params.persona) {
+      loadSessionMessages(params.sessionId, params.persona);
+    }
+  }, [params.sessionId, params.persona]);
+
+  useEffect(() => {
     scrollRef.current?.scrollToEnd(true);
   }, [messages]);
 
@@ -218,6 +258,30 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
+          <View style={styles.chatHeader}>
+            <TouchableOpacity
+              onPress={() => router.push("/history" as Href)}
+              style={styles.chatHeaderButton}
+              accessibilityRole="button"
+              accessibilityLabel="View past conversations"
+            >
+              <Ionicons name="time-outline" size={20} color="#E5E7EB" />
+            </TouchableOpacity>
+
+            <Text style={styles.chatHeaderTitle}>
+              {formatPersonaLabel(persona)}
+            </Text>
+
+            <TouchableOpacity
+              onPress={startNewChat}
+              style={styles.chatHeaderButton}
+              accessibilityRole="button"
+              accessibilityLabel="Start new chat"
+            >
+              <Ionicons name="create-outline" size={20} color="#E5E7EB" />
+            </TouchableOpacity>
+          </View>
+
           <KeyboardAwareScrollView
             ref={scrollRef}
             style={styles.messagesScroll}
@@ -326,6 +390,27 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
+  chatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#2A3342",
+    backgroundColor: "#0F141B",
+  },
+  chatHeaderButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatHeaderTitle: {
+    color: "#F9FAFB",
+    fontSize: 15,
+    fontWeight: "700",
+  },
   container: {
     flex: 1,
     backgroundColor: "#0B0D10",
