@@ -94,6 +94,14 @@ export default function ChatScreen() {
     );
   };
 
+  const cleanAssistantReply = (text: string) =>
+    String(text)
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
   const sendMessage = async () => {
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
@@ -118,7 +126,7 @@ export default function ChatScreen() {
       const assistantMessage: Message = {
         id: `${Date.now()}-ai`,
         role: "assistant",
-        content: res.data.reply,
+        content: cleanAssistantReply(res.data.reply),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -155,16 +163,34 @@ export default function ChatScreen() {
     }
 
     const isUser = msg.role === "user";
+    const isAssistant = msg.role === "assistant";
 
     return (
       <View
         key={msg.id}
         style={[
-          styles.messageBubble,
-          isUser ? styles.userBubble : styles.assistantBubble,
+          styles.messageRow,
+          isUser ? styles.userRow : styles.assistantRow,
         ]}
       >
-        <Text style={styles.messageText}>{msg.content}</Text>
+        <View
+          style={[
+            styles.messageBubble,
+            isUser ? styles.userBubble : styles.assistantBubble,
+          ]}
+        >
+          {isAssistant ? (
+            <Text style={styles.assistantLabel}>AI</Text>
+          ) : null}
+          <Text
+            style={[
+              styles.messageText,
+              isUser ? styles.userMessageText : styles.assistantMessageText,
+            ]}
+          >
+            {msg.content}
+          </Text>
+        </View>
       </View>
     );
   };
@@ -315,27 +341,52 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 14,
+    paddingTop: 18,
+    paddingBottom: 10,
+  },
+  messageRow: {
+    width: "100%",
+    marginBottom: 12,
+  },
+  userRow: {
+    alignItems: "flex-end",
+  },
+  assistantRow: {
+    alignItems: "flex-start",
   },
   messageBubble: {
-    maxWidth: "85%",
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 16,
+    maxWidth: "86%",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 20,
   },
   userBubble: {
-    alignSelf: "flex-end",
     backgroundColor: "#2563EB",
+    borderBottomRightRadius: 8,
   },
   assistantBubble: {
-    alignSelf: "flex-start",
-    backgroundColor: "#1F2933",
+    backgroundColor: "#171E29",
+    borderWidth: 1,
+    borderColor: "#263041",
+    borderBottomLeftRadius: 8,
+  },
+  assistantLabel: {
+    color: "#10B981",
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
   messageText: {
-    color: "#F9FAFB",
     fontSize: 15,
+    lineHeight: 22,
+  },
+  userMessageText: {
+    color: "#F8FAFC",
+  },
+  assistantMessageText: {
+    color: "#E5E7EB",
   },
   systemMessageContainer: {
     alignSelf: "center",
@@ -427,5 +478,6 @@ const styles = StyleSheet.create({
   },
   personaMenuItemTextActive: {
     color: "#10B981",
+    fontWeight: "700",
   },
 });
