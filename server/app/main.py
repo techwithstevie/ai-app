@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import ChatRequest, ChatResponse
 from .ollama_client import chat_with_ollama
+from . import db
 
 app = FastAPI(
     title="AI Chat Backend",
@@ -21,20 +22,17 @@ app.add_middleware(
 PERSONAS = {
     "default": "You are a helpful AI assistant.",
     "senior_dev": (
-        "answer briefly first",
         "You are a senior full-stack engineer specializing in React Native, "
         "FastAPI, and local LLMs via Ollama. Give concise, practical, "
         "production-minded answers."
     ),
     "career_strategist": (
-        "answer briefly first",
         "You are an experienced tech recruiter and career strategist for software "
         "and AI engineers. Help tailor resumes, refine cover letters, and draft "
         "outreach messages. Focus on quantifiable achievements, production impact, "
         "ATS optimization, and crisp, engaging phrasing."
     ),
     "interview_coach": (
-        "answer briefly first",
         "You are a principal engineer and hiring manager. Help the user prep for "
         "technical and behavioral interviews. Enforce the STAR method (Situation, "
         "Task, Action, Result) for behavioral questions, probe for trade-offs in "
@@ -64,12 +62,15 @@ There is no markdown renderer in the UI, so raw markdown will look broken.
 """.strip()
 
 
-# In-memory conversation store: session_id -> list[dict]
-conversations: dict[str, list[dict]] = {}
-
 def build_system_prompt(persona_key: str) -> str:
     persona_prompt = PERSONAS.get(persona_key, PERSONAS["default"])
     return f"{persona_prompt}\n\n{CHAT_RESPONSE_STYLE}"
+
+
+@app.on_event("startup")
+async def on_startup():
+    db.init_db()
+
 
 @app.get("/")
 async def root():
@@ -81,28 +82,43 @@ async def chat(req: ChatRequest) -> ChatResponse:
     session_id = req.session_id
     persona_key = req.persona or "default"
 
-    if session_id not in conversations:
-        conversations[session_id] = []
+    if not db.session_exists(session_id):
+        db.create_session(session_id, persona_key)
         system_prompt = build_system_prompt(persona_key)
-        conversations[session_id].append(
-            {"role": "system", "content": system_prompt}
-        )
+        db.save_message(session_id, "system", system_prompt)
 
-    conversations[session_id].append(
-        {"role": "user", "content": req.message}
-    )
+    db.save_message(session_id, "user", req.message)
+
+    history = db.load_messages(session_id)
 
     try:
-        assistant_reply = await chat_with_ollama(conversations[session_id])
+        assistant_reply = await chat_with_ollama(history)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    conversations[session_id].append(
-        {"role": "assistant", "content": assistant_reply}
-    )
+    db.save_message(session_id, "assistant", assistant_reply)
 
     return ChatResponse(reply=assistant_reply)
+
 
 @app.get("/personas")
 async def list_personas():
     return {"personas": list(PERSONAS.keys())}
+
+
+@app.get("/sessions")
+async def get_sessions():
+    return {"sessions": db.list_sessions()}
+
+
+@app.get("/sessions/{session_id}/messages")
+async def get_session_messages(session_id: str):
+    messages = db.load_messages(session_id)
+    visible = [m for m in messages if m["role"] != "system"]
+    return {"messages": visible}
+
+
+@app.delete("/sessions/{session_id}")
+async def remove_session(session_id: str):
+    db.delete_session(session_id)
+    return {"status": "deleted"}
