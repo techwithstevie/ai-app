@@ -1,14 +1,24 @@
 import React from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useClerk, useUser } from "@clerk/expo";
 
 const BACKEND_URL =
     Constants.expoConfig?.extra?.backendUrl ?? "http://localhost:8000";
 
 const appVersion =
-    Constants.expoConfig?.version ?? Constants.manifest2?.extra?.expoClient?.version ?? "0.1.0";
+    Constants.expoConfig?.version ??
+    Constants.manifest2?.extra?.expoClient?.version ??
+    "0.1.0";
 
 function SettingRow({
     icon,
@@ -59,13 +69,51 @@ function SettingRow({
 }
 
 export default function SettingsScreen() {
+    const { signOut } = useClerk();
+    const { user } = useUser();
+
     return (
         <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.screenTitle}>Settings</Text>
                 <Text style={styles.screenSubtitle}>
-                    App details, environment info, and local controls.
+                    Account details, environment info, and local controls.
                 </Text>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionLabel}>Account</Text>
+                    <View style={styles.card}>
+                        <View style={styles.accountRow}>
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>
+                                    {(user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || "U").toUpperCase()}
+                                </Text>
+                            </View>
+
+                            <View style={styles.accountInfo}>
+                                <Text style={styles.accountName}>
+                                    {user?.fullName ||
+                                        user?.firstName ||
+                                        user?.primaryEmailAddress?.emailAddress ||
+                                        "Signed in"}
+                                </Text>
+                                <Text style={styles.accountEmail}>
+                                    {user?.primaryEmailAddress?.emailAddress ?? "Clerk account"}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <TouchableOpacity
+                            style={styles.signOutButton}
+                            onPress={() => signOut()}
+                            activeOpacity={0.85}
+                        >
+                            <Text style={styles.signOutButtonText}>Sign out</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionLabel}>Application</Text>
@@ -96,25 +144,6 @@ export default function SettingsScreen() {
                                 Alert.alert(
                                     "About",
                                     "This app connects a React Native client to a FastAPI backend and Ollama for local AI chat."
-                                )
-                            }
-                        />
-                    </View>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>Data</Text>
-                    <View style={styles.card}>
-                        <SettingRow
-                            icon="trash-outline"
-                            title="Clear conversation history"
-                            subtitle="Delete saved sessions from the backend"
-                            destructive
-                            onPress={() =>
-                                Alert.alert(
-                                    "Clear history",
-                                    "Delete saved conversations from the backend? This action cannot be undone.",
-                                    [{ text: "Cancel", style: "cancel" }, { text: "OK", style: "destructive" }]
                                 )
                             }
                         />
@@ -163,6 +192,47 @@ const styles = StyleSheet.create({
         borderColor: "#2A3342",
         borderRadius: 16,
         overflow: "hidden",
+    },
+    accountRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 14,
+    },
+    avatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: "#2563EB",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 12,
+    },
+    avatarText: {
+        color: "#F8FAFC",
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    accountInfo: {
+        flex: 1,
+    },
+    accountName: {
+        color: "#F8FAFC",
+        fontSize: 15,
+        fontWeight: "700",
+        marginBottom: 4,
+    },
+    accountEmail: {
+        color: "#8B94A3",
+        fontSize: 12,
+    },
+    signOutButton: {
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+    },
+    signOutButtonText: {
+        color: "#F87171",
+        fontSize: 14,
+        fontWeight: "700",
     },
     settingRow: {
         flexDirection: "row",
