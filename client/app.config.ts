@@ -10,9 +10,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
     return {
         ...base,
-
         plugins: [
-            ...Array.from(new Set([...(base.plugins ?? []), "expo-web-browser"])),
+            ...(base.plugins ?? []),
             [
                 "expo-build-properties",
                 {
@@ -26,19 +25,5 @@ export default ({ config }: ConfigContext): ExpoConfig => {
                 },
             ],
         ],
-
-        android: {
-            ...(base.android ?? {}),
-            package: base.android?.package ?? "com.stevie732.aiapp",
-        },
-
-        extra: {
-            ...(base.extra ?? {}),
-            backendUrl: process.env.BACKEND_URL,
-            eas: {
-                ...((base.extra as any)?.eas ?? {}),
-                projectId: "83193d66-c252-47da-bbe9-60f5e1330729",
-            },
-        },
     };
 };
