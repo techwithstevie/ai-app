@@ -11,9 +11,21 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     return {
         ...base,
 
-        plugins: Array.from(
-            new Set([...(base.plugins ?? []), "expo-web-browser"])
-        ),
+        plugins: [
+            ...Array.from(new Set([...(base.plugins ?? []), "expo-web-browser"])),
+            [
+                "expo-build-properties",
+                {
+                    android: {
+                        packagingOptions: {
+                            resources: {
+                                excludes: ["META-INF/versions/9/OSGI-INF/MANIFEST.MF"],
+                            },
+                        },
+                    },
+                },
+            ],
+        ],
 
         android: {
             ...(base.android ?? {}),
