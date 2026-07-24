@@ -10,6 +10,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
     return {
         ...base,
+        android: {
+            ...(base.android ?? {}),
+            package: "com.stephenprahl.client",
+        },
         plugins: [
             ...(base.plugins ?? []),
             [
@@ -25,5 +29,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
                 },
             ],
         ],
+        extra: {
+            ...(base.extra ?? {}),
+            backendUrl: process.env.BACKEND_URL,
+        },
     };
 };
