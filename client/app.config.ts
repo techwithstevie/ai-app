@@ -16,6 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
         plugins: [
             ...(base.plugins ?? []),
+            "./plugins/withAndroidPackagingFix",
             [
                 "expo-build-properties",
                 {
