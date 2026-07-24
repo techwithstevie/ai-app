@@ -29,6 +29,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
                 },
             ],
         ],
+        ios: {
+            ...(base.ios ?? {}),
+            bundleIdentifier: "com.stephenprahl.client",
+        },
         extra: {
             ...(base.extra ?? {}),
             backendUrl: process.env.BACKEND_URL,
