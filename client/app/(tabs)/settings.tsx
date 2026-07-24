@@ -1,3 +1,5 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import Constants from "expo-constants";
 import React from "react";
 import {
     Alert,
@@ -8,9 +10,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Constants from "expo-constants";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useClerk, useUser } from "@clerk/expo";
 
 const BACKEND_URL =
     Constants.expoConfig?.extra?.backendUrl ?? "http://localhost:8000";
@@ -69,9 +68,6 @@ function SettingRow({
 }
 
 export default function SettingsScreen() {
-    const { signOut } = useClerk();
-    const { user } = useUser();
-
     return (
         <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
             <ScrollView contentContainerStyle={styles.content}>
@@ -85,33 +81,14 @@ export default function SettingsScreen() {
                     <View style={styles.card}>
                         <View style={styles.accountRow}>
                             <View style={styles.avatar}>
-                                <Text style={styles.avatarText}>
-                                    {(user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || "U").toUpperCase()}
-                                </Text>
+                                <Text style={styles.avatarText}>A</Text>
                             </View>
 
                             <View style={styles.accountInfo}>
-                                <Text style={styles.accountName}>
-                                    {user?.fullName ||
-                                        user?.firstName ||
-                                        user?.primaryEmailAddress?.emailAddress ||
-                                        "Signed in"}
-                                </Text>
-                                <Text style={styles.accountEmail}>
-                                    {user?.primaryEmailAddress?.emailAddress ?? "Clerk account"}
-                                </Text>
+                                <Text style={styles.accountName}>Local session</Text>
+                                <Text style={styles.accountEmail}>No authentication required</Text>
                             </View>
                         </View>
-
-                        <View style={styles.divider} />
-
-                        <TouchableOpacity
-                            style={styles.signOutButton}
-                            onPress={() => signOut()}
-                            activeOpacity={0.85}
-                        >
-                            <Text style={styles.signOutButtonText}>Sign out</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
 
