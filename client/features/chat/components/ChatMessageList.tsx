@@ -61,7 +61,11 @@ export default function ChatMessageList({
             style={styles.messagesScroll}
             contentContainerStyle={styles.messagesContent}
             enableOnAndroid
+            enableAutomaticScroll
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            extraScrollHeight={20}
+            showsVerticalScrollIndicator
         >
             <View style={styles.chatContainer}>{messages.map(renderChatMessage)}</View>
         </KeyboardAwareScrollView>
@@ -79,7 +83,6 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 14,
         paddingTop: 18,
-        paddingBottom: 10,
     },
     messageRow: {
         width: "100%",

@@ -1,13 +1,41 @@
-# server/app/db.py
+import hashlib
+import hmac
+import secrets
 import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
 
 DB_PATH = Path(__file__).resolve().parent.parent / "chat_history.db"
+PASSWORD_HASH_ITERATIONS = 200_000
+TOKEN_EXPIRATION_HOURS = 24
+
+
+def _hash_password(password: str, salt: bytes) -> bytes:
+    return hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        PASSWORD_HASH_ITERATIONS,
+        dklen=32,
+    )
+
+
+def _generate_salt() -> bytes:
+    return secrets.token_bytes(16)
+
+
+def _generate_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def _current_timestamp() -> str:
+    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -30,6 +58,28 @@ def init_db() -> None:
                 session_id TEXT PRIMARY KEY,
                 persona TEXT NOT NULL,
                 created_at TEXT DEFAULT (datetime('now'))
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash BLOB NOT NULL,
+                salt BLOB NOT NULL,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS auth_tokens (
+                token TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT (datetime('now')),
+                expires_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             )
             """
         )
@@ -95,4 +145,86 @@ def delete_session(session_id: str) -> None:
     with get_connection() as conn:
         conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
         conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+        conn.commit()
+
+
+def create_user(email: str, password: str) -> int:
+    if get_user_by_email(email) is not None:
+        raise ValueError("Email already registered")
+
+    salt = _generate_salt()
+    password_hash = _hash_password(password, salt)
+
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "INSERT INTO users (email, password_hash, salt) VALUES (?, ?, ?)",
+            (email.lower().strip(), password_hash, salt),
+        )
+        conn.commit()
+        lastrowid = cursor.lastrowid
+        if lastrowid is None:
+            raise RuntimeError("Failed to create user")
+        return lastrowid
+
+
+def get_user_by_email(email: str) -> dict | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT id, email, password_hash, salt FROM users WHERE email = ?",
+            (email.lower().strip(),),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row["id"],
+            "email": row["email"],
+            "password_hash": row["password_hash"],
+            "salt": row["salt"],
+        }
+
+
+def verify_password(password: str, salt: bytes, password_hash: bytes) -> bool:
+    computed_hash = _hash_password(password, salt)
+    return hmac.compare_digest(computed_hash, password_hash)
+
+
+def create_auth_token(user_id: int) -> str:
+    token = _generate_token()
+    expires_at = (datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO auth_tokens (token, user_id, expires_at) VALUES (?, ?, ?)",
+            (token, user_id, expires_at),
+        )
+        conn.commit()
+
+    return token
+
+
+def get_user_by_token(token: str) -> dict | None:
+    now = _current_timestamp()
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT users.id AS id, users.email AS email
+            FROM users
+            JOIN auth_tokens ON auth_tokens.user_id = users.id
+            WHERE auth_tokens.token = ? AND auth_tokens.expires_at > ?
+            """,
+            (token, now),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row["id"],
+            "email": row["email"],
+        }
+
+
+def delete_auth_token(token: str) -> None:
+    with get_connection() as conn:
+        conn.execute("DELETE FROM auth_tokens WHERE token = ?", (token,))
         conn.commit()

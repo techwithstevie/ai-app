@@ -1,8 +1,15 @@
 # server/app/main.py
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .schemas import ChatRequest, ChatResponse
+from .schemas import (
+    AuthLoginRequest,
+    AuthRegisterRequest,
+    AuthTokenResponse,
+    ChatRequest,
+    ChatResponse,
+    UserResponse,
+)
 from .ollama_client import chat_with_ollama
 from . import db
 
@@ -99,6 +106,42 @@ async def chat(req: ChatRequest) -> ChatResponse:
     db.save_message(session_id, "assistant", assistant_reply)
 
     return ChatResponse(reply=assistant_reply)
+
+
+
+
+@app.post("/auth/register", response_model=AuthTokenResponse)
+async def register(req: AuthRegisterRequest) -> AuthTokenResponse:
+    try:
+        user_id = db.create_user(req.email, req.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    token = db.create_auth_token(user_id)
+    return AuthTokenResponse(token=token)
+
+
+@app.post("/auth/login", response_model=AuthTokenResponse)
+async def login(req: AuthLoginRequest) -> AuthTokenResponse:
+    user = db.get_user_by_email(req.email)
+    if user is None or not db.verify_password(req.password, user["salt"], user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = db.create_auth_token(user["id"])
+    return AuthTokenResponse(token=token)
+
+
+@app.get("/auth/me", response_model=UserResponse)
+async def get_current_user(authorization: str | None = Header(default=None)) -> UserResponse:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+
+    token = authorization.split(" ", 1)[1]
+    user = db.get_user_by_token(token)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    return UserResponse(email=user["email"])
 
 
 @app.get("/personas")
