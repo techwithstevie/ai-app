@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import Constants from "expo-constants";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
     Alert,
@@ -10,14 +10,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const BACKEND_URL =
-    Constants.expoConfig?.extra?.backendUrl ?? "http://localhost:8000";
-
-const appVersion =
-    Constants.expoConfig?.version ??
-    Constants.manifest2?.extra?.expoClient?.version ??
-    "0.1.0";
+import { removeToken } from "../../features/auth/services/tokenStore";
 
 function SettingRow({
     icon,
@@ -68,6 +61,8 @@ function SettingRow({
 }
 
 export default function SettingsScreen() {
+    const router = useRouter();
+
     return (
         <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
             <ScrollView contentContainerStyle={styles.content}>
@@ -86,27 +81,45 @@ export default function SettingsScreen() {
 
                             <View style={styles.accountInfo}>
                                 <Text style={styles.accountName}>Local session</Text>
-                                <Text style={styles.accountEmail}>No authentication required</Text>
+                                <Text style={styles.accountEmail}>Authenticated user</Text>
                             </View>
                         </View>
-                    </View>
-                </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>Application</Text>
-                    <View style={styles.card}>
-                        <SettingRow
-                            icon="information-circle-outline"
-                            title="App version"
-                            value={appVersion}
-                        />
-                        <View style={styles.divider} />
-                        <SettingRow
-                            icon="server-outline"
-                            title="Backend URL"
-                            subtitle="Current API target"
-                            value={BACKEND_URL.replace(/^https?:\/\//, "")}
-                        />
+                        <View style={styles.accountMetaRow}>
+                            <View style={styles.accountMetaColumn}>
+                                <Text style={styles.accountMetaLabel}>Signed in</Text>
+                                <Text style={styles.accountMetaText}>Access all app features securely.</Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.signOutButton}
+                            onPress={async () => {
+                                Alert.alert(
+                                    "Sign out",
+                                    "Are you sure you want to sign out?",
+                                    [
+                                        {
+                                            text: "Cancel",
+                                            style: "cancel",
+                                        },
+                                        {
+                                            text: "Sign out",
+                                            style: "destructive",
+                                            onPress: async () => {
+                                                await removeToken();
+                                                router.replace("/sign-in");
+                                            },
+                                        },
+                                    ]
+                                );
+                            }}
+                        >
+                            <View style={styles.signOutButtonInner}>
+                                <Ionicons name="log-out-outline" size={16} color="#F8FAFC" />
+                                <Text style={styles.signOutButtonText}>Sign out</Text>
+                            </View>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -202,12 +215,45 @@ const styles = StyleSheet.create({
         color: "#8B94A3",
         fontSize: 12,
     },
+    accountMetaRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        padding: 14,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: "#2A3342",
+        backgroundColor: "#121827",
+    },
+    accountMetaColumn: {
+        flex: 1,
+    },
+    accountMetaLabel: {
+        color: "#9CA3AF",
+        fontSize: 12,
+        fontWeight: "700",
+        marginBottom: 4,
+    },
+    accountMetaText: {
+        color: "#D1D5DB",
+        fontSize: 13,
+        lineHeight: 18,
+    },
     signOutButton: {
-        paddingHorizontal: 14,
+        marginTop: 12,
+        marginHorizontal: 14,
+        marginBottom: 14,
+        borderRadius: 14,
+        backgroundColor: "#DC2626",
+        overflow: "hidden",
+    },
+    signOutButtonInner: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
         paddingVertical: 14,
     },
     signOutButtonText: {
-        color: "#F87171",
+        color: "#F8FAFC",
         fontSize: 14,
         fontWeight: "700",
     },

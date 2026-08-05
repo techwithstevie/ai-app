@@ -1,7 +1,29 @@
+import { useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
+import { getToken } from "../../features/auth/services/tokenStore";
 
 export default function TabsLayout() {
+    const router = useRouter();
+
+    useEffect(() => {
+        let active = true;
+
+        getToken().then((token) => {
+            if (!active) {
+                return;
+            }
+
+            if (!token) {
+                router.replace("/sign-in");
+            }
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [router]);
+
     return (
         <Tabs
             screenOptions={{

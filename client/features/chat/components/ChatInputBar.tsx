@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
 import {
     ActivityIndicator,
@@ -7,12 +8,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Props = {
     input: string;
     isLoading: boolean;
-    insetsBottom: number;
     onChangeInput: (value: string) => void;
     onOpenPersonaMenu: () => void;
     onSend: () => void;
@@ -21,13 +20,12 @@ type Props = {
 export default function ChatInputBar({
     input,
     isLoading,
-    insetsBottom,
     onChangeInput,
     onOpenPersonaMenu,
     onSend,
 }: Props) {
     return (
-        <View style={[styles.inputContainer, { paddingBottom: insetsBottom || 8 }]}>
+        <View style={styles.inputContainer}>
             <TextInput
                 style={styles.input}
                 value={input}
@@ -71,6 +69,7 @@ const styles = StyleSheet.create({
         alignItems: "flex-end",
         paddingHorizontal: 12,
         paddingTop: 8,
+        paddingBottom: 14,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: "#374151",
         backgroundColor: "#111827",
